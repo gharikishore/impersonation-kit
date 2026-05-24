@@ -262,6 +262,22 @@ candidateFilter: async (admin) => {
 },
 ```
 
+### Pattern D — Marketplace (separate buyer + seller pools)
+Use when the admin needs to test marketplace workflows from both sides. The admin selects a buyer OR a seller persona depending on which side of the workflow they're verifying. The kit doesn't enforce a specific grouping — sort/group inside the switcher UI by `users.role` or a similar discriminator.
+
+```typescript
+candidateFilter: async (admin) => {
+  const rows = await db
+    .select()
+    .from(users)
+    .where(inArray(users.role, ["buyer", "seller"]));
+  return rows.filter((u) => u.id !== admin.id);
+  // UI tip: in your /admin/impersonate page, group the results into two
+  // columns (Buyers / Sellers) so the admin picks the side of the workflow
+  // before picking a specific persona.
+},
+```
+
 ## Troubleshooting
 
 **Cookie not setting**: confirm `cookieName` doesn't collide with another cookie. Confirm route runtime is `nodejs` (not `edge` — edge runtime has different cookie semantics).
