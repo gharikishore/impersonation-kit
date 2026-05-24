@@ -2,4 +2,4 @@
 export { ImpersonationBanner } from "./ImpersonationBanner";
 export type { ImpersonationBannerProps } from "./ImpersonationBanner";
 export { ImpersonatePage } from "./ImpersonatePage";
-export type { ImpersonatePageProps } from "./ImpersonatePage";
+export type { ImpersonatePageProps, ImpersonationRow } from "./ImpersonatePage";

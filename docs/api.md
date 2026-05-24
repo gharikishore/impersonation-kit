@@ -134,6 +134,53 @@ export default function Page() {
 
 Specforge keeps its own admin/impersonate page (Vellum-styled). Most consumers will use this default and theme it.
 
+### Per-row UI override (`renderRow`) — intake #976
+
+For projects that want custom row markup (cards, role-tier badges, icons, descriptions) without writing their own switcher page:
+
+```tsx
+<ImpersonatePage
+  renderRow={(user, { busy, onSwitch }) => (
+    <YourCard onClick={onSwitch} disabled={busy}>
+      <RoleBadge role={user.domainRole} />
+      <Handle handle={user.publicHandle} />
+      <button disabled={busy} onClick={onSwitch}>
+        {busy ? "Switching…" : `Switch to ${user.publicHandle}`}
+      </button>
+    </YourCard>
+  )}
+/>
+```
+
+When `renderRow` is supplied, the kit drops the default table structure. Each row is whatever the callback returns, rendered inside a flat container. The kit still owns iteration + busy-state + the click handler (passed as `onSwitch`).
+
+The `ImpersonationRow` type is exported for typing the callback parameter:
+
+```ts
+import type { ImpersonationRow } from "@gharikishore/impersonation-kit/ui";
+```
+
+### Section headers / grouping (`groupBy`) — intake #977
+
+For projects with many roles that benefit from section headers (e.g., "Architects", "Creators", "Customers"):
+
+```tsx
+<ImpersonatePage
+  groupBy={(user) =>
+    user.domainRole?.startsWith("a") ? "Architects"
+    : user.domainRole?.startsWith("c") ? "Creators"
+    : "Customers"
+  }
+  groupOrder={["Architects", "Creators", "Customers"]}  // optional
+/>
+```
+
+The kit groups candidates by the returned string and renders a section header (h2) before each group. Default group order is insertion order (first user's group first); override with `groupOrder`.
+
+Return `null`/`undefined` from `groupBy` to put a user in the trailing "ungrouped" section (header suppressed).
+
+**Composes with `renderRow`** — section headers stay kit-default; row markup stays consumer-controlled.
+
 ## Types
 
 See [`src/types.ts`](../src/types.ts) for the source-of-truth interfaces:
@@ -144,3 +191,4 @@ See [`src/types.ts`](../src/types.ts) for the source-of-truth interfaces:
 - `ImpersonationContext<U>` — banner-render context
 - `AuditEntry` — audit-log entry shape
 - `ImpersonationTheme` — UI theme tokens
+- `ImpersonationRow` — row shape passed to `renderRow` + `groupBy` callbacks (exported from `./ui`)
