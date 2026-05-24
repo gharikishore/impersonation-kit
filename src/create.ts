@@ -1,33 +1,66 @@
 // createImpersonation factory — the kit's main entry point.
 //
-// Implementation lands in #949 (scaffolding shim for #948). The real
-// implementation will:
-// 1. Capture the config (frozen for the lifetime of the kit instance)
-// 2. Return a kit object with readSessionUser / readRealSessionUser /
-//    readImpersonationContext / requireAdmin / requireRealAdmin /
-//    insertAuditEntry / getImpersonatorId — all bound to the config
+// Captures the config once + returns a kit object bound to it. All helpers
+// (readSessionUser / requireAdmin / insertAuditEntry / etc.) are pre-bound
+// so consumer call sites are clean: `await kit.readSessionUser()` instead
+// of `await readSessionUser(config)`.
 
-import type { ImpersonationConfig, ImpersonationKit, KitUser } from "./types.js";
+import type { AuditEntry, ImpersonationConfig, ImpersonationKit, KitUser } from "./types.js";
+import {
+  readImpersonationContext as _readImpersonationContext,
+  readRealSessionUser as _readRealSessionUser,
+  readSessionUser as _readSessionUser,
+} from "./auth-resolver.js";
+import { requireAdmin as _requireAdmin, requireRealAdmin as _requireRealAdmin } from "./admin-gate.js";
+import { getImpersonatorId as _getImpersonatorId, insertAuditEntry as _insertAuditEntry } from "./audit.js";
+import { NextResponse } from "next/server";
 
 export function createImpersonation<U extends KitUser = KitUser>(
   config: ImpersonationConfig<U>,
 ): ImpersonationKit<U> {
-  // SCAFFOLDING SHIM — replaced by real implementation in #949.
-  // Throwing here keeps consumers from accidentally building against the shim.
-  const notImplemented = (name: string) => async (): Promise<never> => {
-    throw new Error(
-      `impersonation-kit v0.1.0 scaffolding: ${name}() not implemented yet (intake #949)`,
-    );
+  // requireAdmin + requireRealAdmin return U | NextResponse — but the
+  // ImpersonationKit interface promises U. We narrow here by throwing
+  // a guarded error response for the consumer to handle at the route
+  // boundary. (Consumers who want the original return-or-response shape
+  // can import requireAdmin directly from "@kit/admin-gate".)
+  const requireAdmin = async (): Promise<U> => {
+    const result = await _requireAdmin(config);
+    if (result instanceof NextResponse) {
+      throw new GateResponse(result);
+    }
+    return result;
+  };
+  const requireRealAdmin = async (): Promise<U> => {
+    const result = await _requireRealAdmin(config);
+    if (result instanceof NextResponse) {
+      throw new GateResponse(result);
+    }
+    return result;
   };
 
   return {
-    readSessionUser: notImplemented("readSessionUser"),
-    readRealSessionUser: notImplemented("readRealSessionUser"),
-    readImpersonationContext: notImplemented("readImpersonationContext"),
-    requireAdmin: notImplemented("requireAdmin"),
-    requireRealAdmin: notImplemented("requireRealAdmin"),
-    insertAuditEntry: notImplemented("insertAuditEntry"),
-    getImpersonatorId: notImplemented("getImpersonatorId"),
+    readSessionUser: () => _readSessionUser(config),
+    readRealSessionUser: () => _readRealSessionUser(config),
+    readImpersonationContext: () => _readImpersonationContext(config),
+    requireAdmin,
+    requireRealAdmin,
+    insertAuditEntry: (entry: AuditEntry) => _insertAuditEntry(config, entry),
+    getImpersonatorId: () => _getImpersonatorId(config),
     _config: config,
   };
+}
+
+/**
+ * Thrown by the kit's requireAdmin/requireRealAdmin when the gate fails,
+ * wrapping the NextResponse that should be returned to the client. Route
+ * handlers can catch this at their top level and return the response.
+ *
+ * The non-throwing form (`U | NextResponse`) is available via direct
+ * imports from "@kit/admin-gate" if you prefer that style.
+ */
+export class GateResponse extends Error {
+  constructor(public response: NextResponse) {
+    super("Admin gate failed");
+    this.name = "GateResponse";
+  }
 }
