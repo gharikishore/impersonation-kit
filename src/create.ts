@@ -46,6 +46,7 @@ export function createImpersonation<U extends KitUser = KitUser>(
     requireRealAdmin,
     insertAuditEntry: (entry: AuditEntry) => _insertAuditEntry(config, entry),
     getImpersonatorId: () => _getImpersonatorId(config),
+    canCreateCandidates: typeof config.createCandidate === "function",
     _config: config,
   };
 }

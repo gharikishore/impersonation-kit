@@ -86,18 +86,51 @@ export const { POST, DELETE } = createImpersonateRoute(impersonation);
 
 Both endpoints gate on `requireRealAdmin`.
 
-## `createCandidatesRoute(kit) → { GET }`
+## `createCandidatesRoute(kit) → { GET, POST }`
 
-Returns Next.js App Router handler for `/api/admin/impersonate/candidates`.
+Returns Next.js App Router handlers for `/api/admin/impersonate/candidates`.
 
 ```typescript
 // app/api/admin/impersonate/candidates/route.ts
-export const { GET } = createCandidatesRoute(impersonation);
+export const { GET, POST } = createCandidatesRoute(impersonation);
 ```
 
 - **GET**: returns `{ users: User[] }` — the list from `config.candidateFilter(admin)`.
+- **POST** (intake #978): with body `{ email, publicHandle?, displayName?, roleLabel?, roleGroup? }`, calls `config.createCandidate(input)` and writes a `candidate.created` audit entry. Returns `{ ok, user }`. Returns 501 if `createCandidate` is not configured.
 
-Gates on `requireRealAdmin`.
+Both gate on `requireRealAdmin`.
+
+### Configuring `createCandidate` (intake #978)
+
+```typescript
+// src/lib/impersonation.ts
+export const impersonation = createImpersonation({
+  // ... existing fields ...
+  createCandidate: async (input) => {
+    // YOUR project owns this — schema-specific user creation.
+    // input: { email, publicHandle?, displayName?, roleLabel?, roleGroup? }
+
+    const [row] = await db.insert(users).values({
+      email: input.email,
+      publicHandle: input.publicHandle ?? null,
+      displayName: input.displayName ?? null,
+      domainRole: input.roleLabel ?? null,  // map to your schema column
+      systemRole: "user",
+      // ... any other required fields (password hash, provider id, etc.)
+    }).returning();
+
+    // If your project tracks seed/test accounts separately:
+    await db.insert(roleSeeds).values({
+      email: input.email,
+      isTestAccount: true,
+    });
+
+    return row;
+  },
+});
+```
+
+The kit-side `kit.canCreateCandidates` flag is `true` when `createCandidate` is configured (useful for consumer UI to conditionally enable the affordance).
 
 ## `<ImpersonationBanner />`
 
@@ -159,6 +192,29 @@ The `ImpersonationRow` type is exported for typing the callback parameter:
 ```ts
 import type { ImpersonationRow } from "@gharikishore/impersonation-kit/ui";
 ```
+
+### Inline create-candidate form (`showAddCandidate`) — intake #978
+
+For projects that want admins to seed new impersonable users without leaving the switcher:
+
+```tsx
+<ImpersonatePage
+  showAddCandidate
+  // (no other change needed; the form hits the POST handler from
+  // createCandidatesRoute, which delegates to config.createCandidate)
+/>
+```
+
+When `showAddCandidate` is `true` AND the kit was configured with a `createCandidate` callback, the page renders an "+ Add impersonable user" affordance that opens a 5-field inline form (email / handle / displayName / roleLabel / roleGroup). On submit, POSTs to `/api/admin/impersonate/candidates` → calls `config.createCandidate(input)` → writes `candidate.created` audit entry → refreshes the candidate list.
+
+Form fields:
+- **Email** (required) — primary identifier
+- **Public handle** (optional) — display string used by the kit's UI
+- **Display name** (optional)
+- **Role label** (optional) — free-form marker your project maps to its schema (e.g., `architect_l4`)
+- **Group label** (optional) — used by the `groupBy` callback for section placement
+
+Defense: if `showAddCandidate` is `true` but `createCandidate` is unconfigured, the POST returns 501; the consumer should detect via `kit.canCreateCandidates` and avoid showing the affordance in that case.
 
 ### Section headers / grouping (`groupBy`) — intake #977
 

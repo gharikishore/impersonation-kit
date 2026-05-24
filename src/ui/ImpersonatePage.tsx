@@ -87,6 +87,22 @@ export interface ImpersonatePageProps {
   groupBy?: (user: ImpersonationRow) => string | null | undefined;
   /** Optional explicit group ordering. Groups not in this array are appended in insertion order. */
   groupOrder?: string[];
+  /**
+   * #978 — When true (AND the kit was configured with `createCandidate`),
+   * renders an inline collapsible form for seeding new impersonable
+   * users from the switcher. After successful POST the list refreshes.
+   *
+   * Defense: if true but the kit lacks createCandidate, the form stays
+   * hidden — the POST endpoint would return 501 anyway. Consumers
+   * detect that case via `kit.canCreateCandidates`.
+   */
+  showAddCandidate?: boolean;
+  /**
+   * #978 — Override the create-candidate endpoint. Defaults to the
+   * same path as `candidatesEndpoint` (the POST handler from
+   * createCandidatesRoute).
+   */
+  createCandidateEndpoint?: string;
 }
 
 export function ImpersonatePage({
@@ -98,17 +114,17 @@ export function ImpersonatePage({
   renderRow,
   groupBy,
   groupOrder,
+  showAddCandidate = false,
+  createCandidateEndpoint,
 }: ImpersonatePageProps = {}): React.ReactElement {
   const [me, setMe] = useState<Me | null>(null);
   const [users, setUsers] = useState<ImpersonationRow[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [addFormOpen, setAddFormOpen] = useState(false);
+  const [addBusy, setAddBusy] = useState(false);
 
-  useEffect(() => {
-    fetch(meEndpoint, { cache: "no-store" })
-      .then((r) => r.json())
-      .then(setMe)
-      .catch(() => setMe({ email: null, isAdmin: false, impersonating: null }));
+  const refresh = (): void => {
     fetch(candidatesEndpoint, { cache: "no-store" })
       .then((r) => r.json())
       .then((d: { users?: ImpersonationRow[]; error?: string }) => {
@@ -120,6 +136,15 @@ export function ImpersonatePage({
         }
       })
       .catch((e: unknown) => setError(e instanceof Error ? e.message : "Load failed"));
+  };
+
+  useEffect(() => {
+    fetch(meEndpoint, { cache: "no-store" })
+      .then((r) => r.json())
+      .then(setMe)
+      .catch(() => setMe({ email: null, isAdmin: false, impersonating: null }));
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [meEndpoint, candidatesEndpoint, sortRows]);
 
   const gateOk = (me?.isAdmin ?? false) || (me?.impersonating != null);
@@ -143,6 +168,45 @@ export function ImpersonatePage({
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed");
       setBusy(null);
+    }
+  }
+
+  async function createCandidate(form: HTMLFormElement): Promise<void> {
+    const data = new FormData(form);
+    const payload = {
+      email: String(data.get("email") ?? "").trim(),
+      publicHandle: String(data.get("publicHandle") ?? "").trim() || undefined,
+      displayName: String(data.get("displayName") ?? "").trim() || undefined,
+      roleLabel: String(data.get("roleLabel") ?? "").trim() || undefined,
+      roleGroup: String(data.get("roleGroup") ?? "").trim() || undefined,
+    };
+    if (!payload.email) {
+      setError("Email is required.");
+      return;
+    }
+    setAddBusy(true);
+    setError(null);
+    try {
+      const endpoint = createCandidateEndpoint ?? candidatesEndpoint;
+      const r = await fetch(endpoint, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const body = await r.json();
+      if (!r.ok || !body.ok) {
+        setError(body.error ?? "Failed to create candidate.");
+        setAddBusy(false);
+        return;
+      }
+      // Success — reset form, close it, refresh the list.
+      form.reset();
+      setAddFormOpen(false);
+      setAddBusy(false);
+      refresh();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Create failed.");
+      setAddBusy(false);
     }
   }
 
@@ -170,10 +234,124 @@ export function ImpersonatePage({
   return (
     <div style={{ padding: 32, fontFamily: "ui-sans-serif, system-ui, sans-serif", maxWidth: 900, margin: "0 auto" }}>
       <h1 style={{ marginBottom: 8 }}>Impersonate user</h1>
-      <p style={{ marginBottom: 24, color: "#666", fontSize: 14 }}>
+      <p style={{ marginBottom: 16, color: "#666", fontSize: 14 }}>
         Select a user to act as. Your real admin session stays bound; all
         actions are audit-logged with both your id and the persona&apos;s.
       </p>
+
+      {/* #978 — Add-candidate form. Rendered only when the consumer
+          opts in via showAddCandidate. The POST endpoint returns 501
+          if the kit lacks createCandidate; the button just won't
+          succeed in that case. */}
+      {showAddCandidate && (
+        <div style={{ marginBottom: 24 }}>
+          {!addFormOpen ? (
+            <button
+              type="button"
+              onClick={() => { setAddFormOpen(true); setError(null); }}
+              style={{
+                background: "transparent",
+                color: theme?.bannerBg ?? "#1a3a78",
+                border: `1px dashed ${theme?.bannerBg ?? "#1a3a78"}`,
+                padding: "8px 14px",
+                borderRadius: 6,
+                fontSize: 13,
+                fontWeight: 500,
+                cursor: "pointer",
+              }}
+            >
+              + Add impersonable user
+            </button>
+          ) : (
+            <form
+              onSubmit={(e) => { e.preventDefault(); createCandidate(e.currentTarget); }}
+              style={{
+                padding: 16,
+                background: "#fafafa",
+                border: "1px solid #e5e5e5",
+                borderRadius: 8,
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 12,
+                fontSize: 13,
+              }}
+            >
+              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6, color: "#666" }}>Email *</span>
+                <input
+                  type="email"
+                  name="email"
+                  required
+                  placeholder="creator-a4@example.com"
+                  style={{ padding: 6, border: "1px solid #ccc", borderRadius: 4, fontSize: 13 }}
+                />
+              </label>
+              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6, color: "#666" }}>Public handle</span>
+                <input
+                  type="text"
+                  name="publicHandle"
+                  placeholder="architect.l4.#ABC123"
+                  style={{ padding: 6, border: "1px solid #ccc", borderRadius: 4, fontSize: 13 }}
+                />
+              </label>
+              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6, color: "#666" }}>Display name</span>
+                <input
+                  type="text"
+                  name="displayName"
+                  placeholder="Architect L4"
+                  style={{ padding: 6, border: "1px solid #ccc", borderRadius: 4, fontSize: 13 }}
+                />
+              </label>
+              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6, color: "#666" }}>Role label</span>
+                <input
+                  type="text"
+                  name="roleLabel"
+                  placeholder="architect_l4"
+                  style={{ padding: 6, border: "1px solid #ccc", borderRadius: 4, fontSize: 13 }}
+                />
+              </label>
+              <label style={{ display: "flex", flexDirection: "column", gap: 4, gridColumn: "span 2" }}>
+                <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6, color: "#666" }}>Group label (for groupBy section header)</span>
+                <input
+                  type="text"
+                  name="roleGroup"
+                  placeholder="Architects"
+                  style={{ padding: 6, border: "1px solid #ccc", borderRadius: 4, fontSize: 13 }}
+                />
+              </label>
+              <div style={{ gridColumn: "span 2", display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
+                <button
+                  type="button"
+                  onClick={() => { setAddFormOpen(false); setError(null); }}
+                  disabled={addBusy}
+                  style={{
+                    background: "transparent",
+                    color: "#666",
+                    border: "1px solid #ccc",
+                    padding: "6px 14px",
+                    borderRadius: 6,
+                    fontSize: 13,
+                    cursor: addBusy ? "wait" : "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addBusy}
+                  style={{ ...buttonStyle, opacity: addBusy ? 0.6 : 1 }}
+                >
+                  {addBusy ? "Creating…" : "Create"}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      )}
+
       {error && (
         <div style={{ padding: 12, background: "#fee", color: "#900", borderRadius: 6, marginBottom: 16 }}>
           {error}

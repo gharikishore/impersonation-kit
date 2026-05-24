@@ -42,6 +42,30 @@ export interface ImpersonationConfig<U extends KitUser = KitUser> {
 
   /** Optional theme tokens for the built-in banner + switcher UI. */
   theme?: ImpersonationTheme;
+
+  /**
+   * Optional. When supplied, enables:
+   *   - the "Add new impersonable user" form in the default ImpersonatePage
+   *     (gated by the showAddCandidate prop)
+   *   - the POST handler from createCandidatesRoute()
+   *
+   * The kit doesn't know your schema — this is where YOU insert the new
+   * user into your users table + any seed-tracking table + handle
+   * password/auth provider setup. Return the new user matching KitUser.
+   *
+   * Intake #978 (META #947).
+   */
+  createCandidate?: (input: CreateCandidateInput) => Promise<U>;
+}
+
+export interface CreateCandidateInput {
+  email: string;
+  publicHandle?: string;
+  displayName?: string;
+  /** Free-form role marker — your project decides where this maps in schema (domainRole / role / category, etc.). */
+  roleLabel?: string;
+  /** Group label for the kit's groupBy UI (Architects / Players / Customers / ...). */
+  roleGroup?: string;
 }
 
 export interface AuditEntry {
@@ -73,6 +97,8 @@ export interface ImpersonationKit<U extends KitUser = KitUser> {
   requireRealAdmin: () => Promise<U>;
   insertAuditEntry: (entry: AuditEntry) => Promise<void>;
   getImpersonatorId: () => Promise<string | null>;
+  /** #978 — Whether config.createCandidate was supplied (consumers gate UI on this). */
+  canCreateCandidates: boolean;
   /** Internal — the config (used by route factories + UI). */
   _config: ImpersonationConfig<U>;
 }

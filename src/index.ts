@@ -16,6 +16,7 @@ export type {
   KitUser,
   AuditEntry,
   ImpersonationTheme,
+  CreateCandidateInput,
 } from "./types";
 
 // Main factory (recommended for most consumers — pre-bound helpers).
