@@ -3,7 +3,7 @@
 // next/headers cookies() API).
 
 import { cookies } from "next/headers";
-import type { ImpersonationConfig, KitUser } from "./types.js";
+import type { ImpersonationConfig, KitUser } from "./types";
 
 /**
  * Read the current impersonation cookie value, or null if absent.

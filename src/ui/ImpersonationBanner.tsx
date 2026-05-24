@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { ImpersonationTheme } from "../types.js";
+import type { ImpersonationTheme } from "../types";
 
 // ImpersonationBanner — pinned banner shown when an admin is impersonating.
 // Reads /api/me for the impersonating context block. Renders nothing when

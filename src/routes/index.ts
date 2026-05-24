@@ -1,3 +1,3 @@
 // Route factory barrel.
-export { createImpersonateRoute } from "./impersonate.js";
-export { createCandidatesRoute } from "./candidates.js";
+export { createImpersonateRoute } from "./impersonate";
+export { createCandidatesRoute } from "./candidates";

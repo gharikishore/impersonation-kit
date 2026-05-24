@@ -9,8 +9,8 @@
 // guarantee that lets a future investigation trace any action back to the
 // human who triggered it.
 
-import type { AuditEntry, ImpersonationConfig, KitUser } from "./types.js";
-import { readCookie } from "./cookie.js";
+import type { AuditEntry, ImpersonationConfig, KitUser } from "./types";
+import { readCookie } from "./cookie";
 
 /**
  * Resolves the impersonating admin's id from the current request, if any.

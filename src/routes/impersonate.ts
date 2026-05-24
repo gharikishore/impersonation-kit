@@ -13,9 +13,9 @@
 // already impersonating user A can hop to user B without exiting first.
 
 import { NextRequest, NextResponse } from "next/server";
-import type { ImpersonationKit, KitUser } from "../types.js";
-import { setCookie, clearCookie } from "../cookie.js";
-import { requireRealAdmin } from "../admin-gate.js";
+import type { ImpersonationKit, KitUser } from "../types";
+import { setCookie, clearCookie } from "../cookie";
+import { requireRealAdmin } from "../admin-gate";
 
 export function createImpersonateRoute<U extends KitUser>(
   kit: ImpersonationKit<U>,

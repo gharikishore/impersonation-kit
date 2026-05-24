@@ -16,10 +16,10 @@ export type {
   KitUser,
   AuditEntry,
   ImpersonationTheme,
-} from "./types.js";
+} from "./types";
 
 // Main factory (recommended for most consumers — pre-bound helpers).
-export { createImpersonation, GateResponse } from "./create.js";
+export { createImpersonation, GateResponse } from "./create";
 
 // Direct (config-passing) variants for consumers who want the non-throwing
 // `U | NextResponse` shape from requireAdmin/requireRealAdmin, or who want
@@ -28,7 +28,7 @@ export {
   readSessionUser,
   readRealSessionUser,
   readImpersonationContext,
-} from "./auth-resolver.js";
-export { requireAdmin, requireRealAdmin } from "./admin-gate.js";
-export { insertAuditEntry, getImpersonatorId } from "./audit.js";
-export { readCookie, setCookie, clearCookie } from "./cookie.js";
+} from "./auth-resolver";
+export { requireAdmin, requireRealAdmin } from "./admin-gate";
+export { insertAuditEntry, getImpersonatorId } from "./audit";
+export { readCookie, setCookie, clearCookie } from "./cookie";

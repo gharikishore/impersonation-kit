@@ -7,8 +7,8 @@
 // impersonating can still switch).
 
 import { NextRequest, NextResponse } from "next/server";
-import type { ImpersonationKit, KitUser } from "../types.js";
-import { requireRealAdmin } from "../admin-gate.js";
+import type { ImpersonationKit, KitUser } from "../types";
+import { requireRealAdmin } from "../admin-gate";
 
 export function createCandidatesRoute<U extends KitUser>(
   kit: ImpersonationKit<U>,

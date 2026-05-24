@@ -14,8 +14,8 @@
 // If the design ever diverges, only the differing helper needs to change.
 
 import { NextResponse } from "next/server";
-import type { ImpersonationConfig, KitUser } from "./types.js";
-import { readRealSessionUser } from "./auth-resolver.js";
+import type { ImpersonationConfig, KitUser } from "./types";
+import { readRealSessionUser } from "./auth-resolver";
 
 /**
  * Returns the admin user when the request is authenticated as an admin;

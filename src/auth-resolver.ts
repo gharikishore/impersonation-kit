@@ -12,8 +12,8 @@ import type {
   ImpersonationConfig,
   ImpersonationContext,
   KitUser,
-} from "./types.js";
-import { readCookie } from "./cookie.js";
+} from "./types";
+import { readCookie } from "./cookie";
 
 /**
  * Effective session user — returns the impersonated user when the real

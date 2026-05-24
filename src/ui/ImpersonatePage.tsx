@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { ImpersonationTheme } from "../types.js";
+import type { ImpersonationTheme } from "../types";
 
 // ImpersonatePage — admin-only switcher UI. Lists candidates (via the
 // candidates endpoint) + Switch-to-X buttons. POST to the impersonate

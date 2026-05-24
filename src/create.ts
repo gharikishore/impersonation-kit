@@ -5,14 +5,14 @@
 // so consumer call sites are clean: `await kit.readSessionUser()` instead
 // of `await readSessionUser(config)`.
 
-import type { AuditEntry, ImpersonationConfig, ImpersonationKit, KitUser } from "./types.js";
+import type { AuditEntry, ImpersonationConfig, ImpersonationKit, KitUser } from "./types";
 import {
   readImpersonationContext as _readImpersonationContext,
   readRealSessionUser as _readRealSessionUser,
   readSessionUser as _readSessionUser,
-} from "./auth-resolver.js";
-import { requireAdmin as _requireAdmin, requireRealAdmin as _requireRealAdmin } from "./admin-gate.js";
-import { getImpersonatorId as _getImpersonatorId, insertAuditEntry as _insertAuditEntry } from "./audit.js";
+} from "./auth-resolver";
+import { requireAdmin as _requireAdmin, requireRealAdmin as _requireRealAdmin } from "./admin-gate";
+import { getImpersonatorId as _getImpersonatorId, insertAuditEntry as _insertAuditEntry } from "./audit";
 import { NextResponse } from "next/server";
 
 export function createImpersonation<U extends KitUser = KitUser>(
