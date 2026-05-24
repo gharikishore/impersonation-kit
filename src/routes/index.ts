@@ -1,2 +1,3 @@
-// Route factory barrel — implementations in #950.
-export {};
+// Route factory barrel.
+export { createImpersonateRoute } from "./impersonate.js";
+export { createCandidatesRoute } from "./candidates.js";
