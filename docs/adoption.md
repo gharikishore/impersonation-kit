@@ -288,6 +288,31 @@ candidateFilter: async (admin) => {
 
 **Audit entries missing `impersonated_by_user_id`**: confirm all audit writes go through `insertAuditEntry`, not raw `db.insert(auditLog).values(...)`.
 
+## Naming convention
+
+This kit follows the multi-kit naming convention codified in `~/.claude/CLAUDE.md` → "Naming convention for multi-kit coexistence." Originating intake: `hmbr-starter#86 KIT-NAMING-CONVENTION`.
+
+Four rules in summary:
+
+1. **Fonts**: `font-<slug>-<role>` per kit. (vellum-kit is the platform default and keeps unprefixed `font-display`/`-sans`/`-mono`.)
+2. **Colors**: descriptive specific names, never generic.
+3. **CSS variables**: every var prefixed with the kit slug.
+4. **Animations**: `animate-<slug>-<name>` for kit-specific motion.
+
+### What THIS kit owns
+
+This kit ships **server-side logic + a thin set of React components** (banner, switcher, audit helpers) — but **no design tokens of its own**. The banner + switcher render in whatever Tailwind preset the consumer applies (typically `vellum-kit`'s admin defaults).
+
+| Layer | Namespace | Examples |
+|---|---|---|
+| **Font slug** | (none — no own typography) | Components inherit from consumer's preset |
+| **Colors** | (none — no own palette) | Components use semantic `text-ink` / `bg-card` style classes from the consumer |
+| **CSS variables** | (none) | — |
+| **Tailwind utilities** | (none added directly) | The banner / switcher use *consumer-supplied* utilities |
+| **Animations** | (none) | No kit-specific keyframes |
+
+Because this kit has no visual identity of its own, it doesn't need a slug — it sits behind whichever brand kit is active. If you impersonate-as a player on hmbropen.com, the impersonation banner picks up hmbropen-kit's dark palette automatically through CSS-variable inheritance. If you impersonate-as on hmbrsports.com, it picks up vellum's cream.
+
 ## Next
 
 - Read [`api.md`](api.md) for the full API surface
