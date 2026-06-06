@@ -33,3 +33,15 @@ export {
 export { requireAdmin, requireRealAdmin } from "./admin-gate";
 export { insertAuditEntry, getImpersonatorId } from "./audit";
 export { readCookie, setCookie, clearCookie } from "./cookie";
+
+// Audit READ layer — standard queries over the kit-owned audit_log shape,
+// plus the uuid/cuid metadata normalization the writer created (#396).
+export { createAuditReader, normalizeAuditRow } from "./audit-read";
+export type {
+  AuditSql,
+  AuditReader,
+  AuditReaderOptions,
+  AuditQueryFilters,
+  AuditFacets,
+  AuditLogRow,
+} from "./audit-read";
